@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: greffecare-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: greffecare
+      POSTGRES_USER: greffecare
+      POSTGRES_PASSWORD: greffecare
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U greffecare -d greffecare"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - greffecare-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: greffecare-keycloak
+    restart: unless-stopped
+    environment:
+      # Admin Keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
+      # Base de données
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/greffecare
+      KC_DB_USERNAME: greffecare
+      KC_DB_PASSWORD: greffecare
+
+      # HTTP en clair (dev)
+      KC_HTTP_ENABLED: "true"
+
+      # Proxy / headers (utile si un reverse proxy plus tard)
+      KC_PROXY_HEADERS: xforwarded
+
+      # 👇 Partie CRITIQUE : URL publique réelle
+      # C'est cette valeur qui évite le bug "Loading the Admin UI"
+      KC_HOSTNAME_URL: http://localhost:8080
+      KC_HOSTNAME_STRICT: "false"
+    command:
+      - start-dev
+      - --http-port=8080
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - greffecare-net
+
+volumes:
+  pgdata:
+
+networks:
+  greffecare-net:
+
