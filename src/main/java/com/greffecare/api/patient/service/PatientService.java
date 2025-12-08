@@ -5,16 +5,18 @@ import com.greffecare.api.patient.dto.PatientResponse;
 import com.greffecare.api.patient.exception.PatientNotFoundException;
 import com.greffecare.api.patient.model.Patient;
 import com.greffecare.api.patient.repository.PatientRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class PatientService {
 
     private final PatientRepository patientRepository;
+
+    public PatientService(PatientRepository patientRepository) {
+        this.patientRepository = patientRepository;
+    }
 
     public PatientResponse create(PatientRequest request) {
         Patient patient = new Patient();
@@ -43,16 +45,41 @@ public class PatientService {
         return mapToResponse(patient);
     }
 
-    private PatientResponse mapToResponse(Patient p) {
+    // 🔸 NEW : mise à jour d'un patient existant
+    public PatientResponse update(Long id, PatientRequest request) {
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() -> new PatientNotFoundException(id));
+
+        patient.setNom(request.nom());
+        patient.setPrenom(request.prenom());
+        patient.setDateNaissance(request.dateNaissance());
+        patient.setNumeroDossier(request.numeroDossier());
+        patient.setEmail(request.email());
+        patient.setTelephone(request.telephone());
+        patient.setPathologie(request.pathologie());
+
+        Patient saved = patientRepository.save(patient);
+        return mapToResponse(saved);
+    }
+
+    // 🔸 NEW : suppression d'un patient
+    public void delete(Long id) {
+        if (!patientRepository.existsById(id)) {
+            throw new PatientNotFoundException(id);
+        }
+        patientRepository.deleteById(id);
+    }
+
+    private PatientResponse mapToResponse(Patient patient) {
         return new PatientResponse(
-                p.getId(),
-                p.getNom(),
-                p.getPrenom(),
-                p.getDateNaissance(),
-                p.getNumeroDossier(),
-                p.getEmail(),
-                p.getTelephone(),
-                p.getPathologie()
+                patient.getId(),
+                patient.getNom(),
+                patient.getPrenom(),
+                patient.getDateNaissance(),
+                patient.getNumeroDossier(),
+                patient.getEmail(),
+                patient.getTelephone(),
+                patient.getPathologie()
         );
     }
 }
